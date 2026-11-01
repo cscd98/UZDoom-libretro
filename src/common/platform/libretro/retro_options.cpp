@@ -95,7 +95,8 @@ const char *Choice(const char *key, std::initializer_list<const char *> values, 
 }
 
 retro_core_option_v2_category categories[] = {
-    {"graphics", "Graphics", "Output resolution, antialiasing and HUD placement."},
+    {"graphics", "Graphics", "Output resolution and antialiasing."},
+    {"vr", "VR", "Headset mode, laser sight, HUD placement and thumbstick behaviour."},
     {"input", "Input", "Mouse sensitivity and keyboard bindings used by the retropad."},
 #if 0
     {"engine", "Engine settings", "Standalone console settings. Engine configuration preserves the INI or in-game value."},
@@ -131,6 +132,16 @@ std::string Number(double number)
 float VRHUDOffset()
 {
     return hudOffset;
+}
+
+bool VRSmoothTurn()
+{
+    return !strcmp(Choice("uzdoom_vr_turn_mode", {"snap", "smooth"}, "smooth"), "smooth");
+}
+
+unsigned VRTurnAngle()
+{
+    return unsigned(atoi(Choice("uzdoom_vr_turn_angle", {"15", "30", "45", "60", "75", "90"}, "45")));
 }
 
 bool VRLaserEnabled()
@@ -302,9 +313,44 @@ void RegisterOptions(bool engine)
         definitions.push_back(def);
     };
 
+    retro_core_option_v2_definition vr{};
+    vr.key = "uzdoom_vr";
+    vr.desc = "VR mode";
+    vr.category_key = "vr";
+    vr.info = "GL/GLES only. Stereoscopic sends two eye views. Immersive uses headset eye poses and FOV when tracking is available. Unsupported frontends use normal output. Restart core to take effect.";
+    vr.default_value = "off";
+    vr.values[0] = {"off", "Off"};
+    vr.values[1] = {"stereoscopic", "Stereoscopic"};
+    vr.values[2] = {"immersive", "Immersive"};
+    definitions.push_back(vr);
+
+    retro_core_option_v2_definition laser{};
+    laser.key = "uzdoom_vr_laser";
+    laser.desc = "VR laser sight";
+    laser.category_key = "vr";
+    laser.info = "VR only: show a red aiming dot on the hit surface. The ordinary HUD crosshair is hidden in VR even when the laser is off.";
+    laser.default_value = "on";
+    laser.values[0] = {"on", "On"};
+    laser.values[1] = {"off", "Off"};
+    definitions.push_back(laser);
+
+    graphics("uzdoom_vr_hud_offset", "Immersive HUD vertical offset", "Fraction of HUD height to move downward. 0 centres the HUD plane; 0.3 places it lower. Does not move the weapon.",
+        "0.3", {"0", "0.1", "0.2", "0.3", "0.4"});
+    definitions.back().category_key = "vr";
+
     graphics("uzdoom_vr_hands", "VR thumbstick roles", "Swap thumbsticks only. Gun tracking and triggers do not change.",
-        "swapped", {"standard", "swapped"});
-    definitions.back().category_key = "input";
+        "standard", {"standard", "swapped"});
+    definitions.back().category_key = "vr";
+
+    graphics("uzdoom_vr_turn_mode", "VR turning", "Snap turns by a fixed angle. Smooth turns continuously while the stick is held.",
+        "smooth", {"snap", "smooth"});
+    definitions.back().values[0].label = "Snap";
+    definitions.back().values[1].label = "Smooth";
+    definitions.back().category_key = "vr";
+
+    graphics("uzdoom_vr_turn_angle", "VR turn angle", "Snap: degrees per flick. Smooth: the stick turns at twice this many degrees per second.",
+        "45", {"15", "30", "45", "60", "75", "90"});
+    definitions.back().category_key = "vr";
 
     graphics("uzdoom_mouse_sensitivity", "Mouse sensitivity", "Gameplay mouse sensitivity for both axes. 2 is the engine default. Menu cursor speed is unchanged.",
         "2", {"0.25", "0.5", "0.75", "1", "1.25", "1.5", "2", "2.5", "3", "4", "5", "6", "8"});
@@ -324,30 +370,6 @@ void RegisterOptions(bool engine)
     graphics("uzdoom_supersampling", "Supersampling", "Internal resolution multiplier per axis. 1 is native; 2 renders four times as many pixels and downsamples to the output resolution.",
         "1", {"1", "1.25", "1.5", "1.75", "2"});
     definitions.back().values[0].label = "1x (Native)";
-
-    retro_core_option_v2_definition vr{};
-    vr.key = "uzdoom_vr";
-    vr.desc = "VR mode";
-    vr.category_key = "graphics";
-    vr.info = "GL/GLES only. Stereoscopic sends two eye views. Immersive uses headset eye poses and FOV when tracking is available. Unsupported frontends use normal output.";
-    vr.default_value = "off";
-    vr.values[0] = {"off", "Off"};
-    vr.values[1] = {"stereoscopic", "Stereoscopic"};
-    vr.values[2] = {"immersive", "Immersive"};
-    definitions.push_back(vr);
-
-    retro_core_option_v2_definition laser{};
-    laser.key = "uzdoom_vr_laser";
-    laser.desc = "VR laser sight";
-    laser.category_key = "graphics";
-    laser.info = "VR only: show a red aiming dot on the hit surface. The ordinary HUD crosshair is hidden in VR even when the laser is off.";
-    laser.default_value = "on";
-    laser.values[0] = {"on", "On"};
-    laser.values[1] = {"off", "Off"};
-    definitions.push_back(laser);
-
-    graphics("uzdoom_vr_hud_offset", "Immersive HUD vertical offset", "Fraction of HUD height to move downward. 0 centres the HUD plane; 0.3 places it lower. Does not move the weapon.",
-        "0.3", {"0", "0.1", "0.2", "0.3", "0.4"});
 
     for (unsigned i = 0; i < 16; ++i)
     {

@@ -27,6 +27,8 @@ void ApplyVRResolution(bool allowGrowth = false);
 bool AwaitVRResolution();
 void ResizeOutput();
 bool VRLaserEnabled();
+bool VRSmoothTurn();
+unsigned VRTurnAngle();
 float VRHUDOffset();
 unsigned PadBinding(unsigned button);
 enum PadAction : unsigned

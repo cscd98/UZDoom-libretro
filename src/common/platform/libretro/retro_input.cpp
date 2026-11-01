@@ -121,8 +121,15 @@ void VRCommands(bool active)
     const float y = Libretro::InputState(0, RETRO_DEVICE_ANALOG,
         Libretro::VRPadStick(RETRO_DEVICE_INDEX_ANALOG_RIGHT,
         Libretro::VRSticksSwapped()), RETRO_DEVICE_ID_ANALOG_Y)/32768.0f;
-    const auto actions = vrSticks.Poll(x, y, grip);
-    pendingTurn += actions.turn * 45.0;
+    const bool smooth = Libretro::VRSmoothTurn();
+    const auto actions = vrSticks.Poll(x, y, grip, !smooth);
+    pendingTurn += actions.turn * double(Libretro::VRTurnAngle());
+
+    if (smooth && actions.smooth != 0.0f)
+    {
+        const float magnitude = std::max(0.0f, (std::abs(actions.smooth) - 0.15f) / 0.85f);
+        pendingTurn -= std::copysign(magnitude, actions.smooth) * 2.0 * Libretro::VRTurnAngle() / Libretro::FrameRate;
+    }
 
     const int weapon = actions.weapon;
     if (weapon)

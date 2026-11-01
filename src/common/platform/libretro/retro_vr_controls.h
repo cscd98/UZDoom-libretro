@@ -92,16 +92,16 @@ struct VRStickState
     bool rightReady = true, leftReady = true;
     int weapon = 0;
     int axis = 0;
-    struct Actions { int turn; int weapon; };
+    struct Actions { int turn; int weapon; float smooth; };
 
-    Actions Poll(float x, float y, bool blocked)
+    Actions Poll(float x, float y, bool blocked, bool snap = true)
     {
         if (blocked || (std::abs(x) < 0.4f && std::abs(y) < 0.4f))
         {
             axis = 0;
             Turn(0);
             Weapon(0);
-            return {};
+            return {0, 0, 0.0f};
         }
 
         if (!axis && (std::abs(x) > 0.6f || std::abs(y) > 0.6f))
@@ -109,7 +109,8 @@ struct VRStickState
             axis = std::abs(x) > std::abs(y) ? 1 : 2;
         }
 
-        return {Turn(axis == 1 ? x : 0), Weapon(axis == 2 ? y : 0)};
+        const float turnX = axis == 1 ? x : 0;
+        return {snap ? Turn(turnX) : 0, Weapon(axis == 2 ? y : 0), snap ? 0.0f : turnX};
     }
 
     int Turn(float x)
