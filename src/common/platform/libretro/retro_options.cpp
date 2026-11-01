@@ -211,7 +211,7 @@ void ApplyVRResolution(bool allowGrowth)
     Height = pendingHeight;
     MaxWidth = nextMaxWidth;
     MaxHeight = nextMaxHeight;
-    retro_system_av_info info{{Width, Height, MaxWidth, MaxHeight, float(Width)/Height}, {35.0, 48000.0}};
+    retro_system_av_info info{{Width, Height, MaxWidth, MaxHeight, float(Width)/Height}, {FrameRate, 48000.0}};
 
     if (Environment && Environment(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &info))
     {

@@ -2204,7 +2204,11 @@ void TryRunTics()
 		doWait = true;
 
 #ifdef __LIBRETRO__
-	doWait = true; // One simulated tic per frontend frame, including fast-forward.
+	// One simulated tic per frontend frame unless frames are paced at a fixed rate (VR).
+	const bool framePaced = I_RetroFramePaced();
+	doWait = !framePaced;
+	if (cl_capfps != !framePaced)
+		cl_capfps = !framePaced;
 #endif
 	// Get the full number of tics the client can run.
 	if (doWait)

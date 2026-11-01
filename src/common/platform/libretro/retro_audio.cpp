@@ -2,6 +2,7 @@
 #include "i_sound.h"
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <deque>
 #include <mutex>
 
@@ -79,9 +80,10 @@ void ResetAudio()
 void RenderAudio()
 {
     // Advance the mixer on the engine thread
+    const unsigned rate = std::max(1u, unsigned(std::lround(FrameRate)));
     remainder += 48000;
-    unsigned frames = remainder / 35;
-    remainder %= 35;
+    unsigned frames = remainder / rate;
+    remainder %= rate;
     std::array<int16_t, 2744> samples{};
 
     if (GSnd) GSnd->RenderSamples(samples.data(), frames);

@@ -526,7 +526,13 @@ void PerformWipe(FTexture* startimg, FTexture* endimg, int wipe_type, bool stops
 
 	do
 	{
-		if (wiper->Interpolatable() && !cl_capfps)
+#ifdef __LIBRETRO__
+		// Frontend-driven time only advances in I_WaitVBL here, so the interpolated path would never finish.
+		const bool interpolate = false;
+#else
+		const bool interpolate = wiper->Interpolatable() && !cl_capfps;
+#endif
+		if (interpolate)
 		{
 			nowtime = I_msTime();
 			diff_frac = (nowtime - wipestart) * 40. / 1000.;	// Using 35 here feels too slow.

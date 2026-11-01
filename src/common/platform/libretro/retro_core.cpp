@@ -12,6 +12,8 @@
 #include "engineerrors.h"
 #include "c_dispatch.h"
 #include "i_sound.h"
+#include "i_time.h"
+#include <cmath>
 #include <array>
 #include <algorithm>
 #include "retro_context.h"
@@ -32,6 +34,8 @@ retro_input_state_t InputState = nullptr;
 retro_hw_render_callback Hardware{};
 unsigned Width = 640, Height = 480, MaxWidth = 3840, MaxHeight = 2160;
 bool GLES = false, UseVulkan = false;
+double FrameRate = 35.0;
+
 
 namespace
 {
@@ -125,6 +129,34 @@ void ContextDestroy()
 }
 
 } // namespace
+
+// Run at the largest whole fraction of the target refresh rate within 90 Hz, falling back to one tic per frame.
+static double TargetFrameRate()
+{
+    float refresh = 0;
+
+    if (Environment && Environment(RETRO_ENVIRONMENT_GET_TARGET_REFRESH_RATE, &refresh) && refresh >= 35.0f)
+        return refresh / std::max(1.0, std::ceil(refresh / 90.0 - 0.001));
+
+    return 35.0;
+}
+
+void UpdateFrameRate()
+{
+    const double fps = TargetFrameRate();
+
+    if (std::abs(fps - FrameRate) < 0.001)
+        return;
+
+    FrameRate = fps;
+    I_RetroSetFrameRate(fps == 35.0 ? 0 : fps);
+
+    if (started && Environment)
+    {
+        retro_system_av_info info{{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {FrameRate, 48000.0}};
+        Environment(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &info);
+    }
+}
 
 void Log(retro_log_level level, const char *text)
 {
@@ -224,7 +256,7 @@ void retro_get_system_info(retro_system_info *info)
 
 void retro_get_system_av_info(retro_system_av_info *info)
 {
-    *info = {{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {35.0, 48000.0}};
+    *info = {{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {TargetFrameRate(), 48000.0}};
 }
 
 bool retro_load_game(const retro_game_info *info)
@@ -343,6 +375,7 @@ void retro_run()
     }
 
     BeginVRFrame();
+    UpdateFrameRate();
 
     if (started)
     {
@@ -370,6 +403,7 @@ void retro_run()
     }
 
     presented = false;
+    I_RetroAdvanceFrame();
     SwitchContext(&frontendContext, &engineContext);
 
     if (finished)

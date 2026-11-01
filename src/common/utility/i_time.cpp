@@ -45,6 +45,7 @@ double TimeScale = 1.0;
 
 #ifdef __LIBRETRO__
 static uint64_t RetroTime = 1;
+static double RetroFrameRate = 0;
 #endif
 static uint64_t GetTimePoint()
 {
@@ -55,6 +56,24 @@ static uint64_t GetTimePoint()
 	return (uint64_t)(duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count());
 #endif
 }
+
+#ifdef __LIBRETRO__
+void I_RetroSetFrameRate(double fps)
+{
+	RetroFrameRate = fps;
+}
+
+bool I_RetroFramePaced()
+{
+	return RetroFrameRate > 0;
+}
+
+void I_RetroAdvanceFrame()
+{
+	if (RetroFrameRate > 0)
+		RetroTime += uint64_t(1e9 / RetroFrameRate + 0.5);
+}
+#endif
 
 void I_InitTime()
 {
@@ -202,6 +221,9 @@ void I_FreezeTime(bool frozen)
 	{
 		assert(FreezeTime == 0);
 		FreezeTime = GetClockTimeNS();
+#ifdef __LIBRETRO__
+		if (FreezeTime == 0) FreezeTime = 1; // Frontend time can still be at its origin; 0 means not frozen.
+#endif
 	}
 	else
 	{

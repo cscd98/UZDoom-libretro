@@ -33,6 +33,12 @@ void I_InitTime();
 
 // Called by D_DoomLoop, sets the time for the current frame
 void I_SetFrameTime();
+#ifdef __LIBRETRO__
+// With a frame rate set, each frontend frame advances time by 1/fps instead of one tic. 0 locks one tic per frame.
+void I_RetroSetFrameRate(double fps);
+bool I_RetroFramePaced();
+void I_RetroAdvanceFrame();
+#endif
 
 // Called by D_DoomLoop, returns current time in tics.
 int I_GetTime(double const ticrate = GameTicRate);

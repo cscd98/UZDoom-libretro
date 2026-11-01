@@ -8,6 +8,8 @@ extern retro_input_state_t InputState;
 extern retro_hw_render_callback Hardware;
 extern unsigned Width, Height, MaxWidth, MaxHeight;
 extern bool GLES, UseVulkan;
+extern double FrameRate;
+void UpdateFrameRate();
 void Log(enum retro_log_level level, const char *text);
 void Present();
 const char *SaveDirectory();
