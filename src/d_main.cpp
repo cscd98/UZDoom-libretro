@@ -1,5 +1,6 @@
 #ifdef __LIBRETRO__
 #include "common/platform/libretro/retro_platform.h"
+#include "common/platform/libretro/retro_vr.h"
 #endif
 /*
 ** d_main.cpp
@@ -3252,6 +3253,11 @@ IntRect System_GetSceneRect()
 	IntRect mSceneViewport;
 	// Special handling so the view with a visible status bar displays properly
 	int height, width;
+#ifdef __LIBRETRO__
+	// Immersive eyes must stay centred on the submitted field of view, so ignore the status bar offset.
+	if (Libretro::VRImmersive())
+		return { 0, 0, screen->GetWidth(), screen->GetHeight() };
+#endif
 	if (screenblocks >= 10)
 	{
 		height = screen->GetHeight();

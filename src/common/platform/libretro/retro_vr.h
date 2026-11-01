@@ -12,6 +12,7 @@ void SubmitVRViews();
 void ResetVR();
 int StereoMode();
 bool VRActive();
+bool VRImmersive();
 bool VRControlsActive();
 bool VRSticksSwapped();
 void CalibrateVRAim();

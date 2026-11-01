@@ -107,6 +107,11 @@ bool VRActive()
     return stereo;
 }
 
+bool VRImmersive()
+{
+    return immersive;
+}
+
 bool VRControlsActive()
 {
     return vrInputProfile;
