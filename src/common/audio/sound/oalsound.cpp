@@ -995,11 +995,11 @@ void OpenALSoundRenderer::RenderSamples(int16_t *samples, unsigned frames)
 	if (!render)
 		return;
 
+	// Music decoding takes far longer than a frame, so refill streams on the background thread.
+	StreamWake.notify_one();
+
 	while (frames)
 	{
-		for (auto stream : Streams)
-			stream->Process();
-
 		unsigned count = std::min(frames, 256u);
 		render(Device, samples, count);
 		samples += count * 2;
@@ -1306,10 +1306,8 @@ void OpenALSoundRenderer::UnloadSound(SoundHandle sfx)
 
 SoundStream *OpenALSoundRenderer::CreateStream(SoundStreamCallback callback, int buffbytes, SampleType stype, ChannelConfig chans, int samplerate, void *userdata)
 {
-#ifndef __LIBRETRO__
 	if(StreamThread.get_id() == std::thread::id())
 		StreamThread = std::thread(std::mem_fn(&OpenALSoundRenderer::BackgroundProc), this);
-#endif
 	OpenALSoundStream *stream = new OpenALSoundStream(this);
 	if (!stream->Init(callback, buffbytes, stype, chans, samplerate, userdata))
 	{

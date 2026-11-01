@@ -14,6 +14,7 @@
 #include "i_sound.h"
 #include "i_time.h"
 #include <cmath>
+#include <chrono>
 #include <array>
 #include <algorithm>
 #include "retro_context.h"
@@ -34,7 +35,7 @@ retro_input_state_t InputState = nullptr;
 retro_hw_render_callback Hardware{};
 unsigned Width = 640, Height = 480, MaxWidth = 3840, MaxHeight = 2160;
 bool GLES = false, UseVulkan = false;
-double FrameRate = 35.0;
+double FrameRate = 35.0, MeasuredRefresh = 0;
 
 
 namespace
@@ -134,15 +135,56 @@ void ContextDestroy()
 static double TargetFrameRate()
 {
     float refresh = 0;
+    const bool got = Environment && Environment(RETRO_ENVIRONMENT_GET_TARGET_REFRESH_RATE, &refresh);
 
-    if (Environment && Environment(RETRO_ENVIRONMENT_GET_TARGET_REFRESH_RATE, &refresh) && refresh >= 35.0f)
+    if (MeasuredRefresh > 0 && VRActive())
+        refresh = float(MeasuredRefresh);
+
+    if ((got || MeasuredRefresh > 0) && refresh >= 35.0f)
         return refresh / std::max(1.0, std::ceil(refresh / 90.0 - 0.001));
 
     return 35.0;
 }
 
+// Median run interval over a window, snapped to a standard headset rate.
+static void MeasureRefresh()
+{
+    using Clock = std::chrono::steady_clock;
+    static Clock::time_point last;
+    static std::vector<double> intervals;
+    const auto now = Clock::now();
+
+    if (!started || !VRActive())
+    {
+        intervals.clear();
+        last = {};
+        return;
+    }
+
+    if (last != Clock::time_point{})
+        intervals.push_back(std::chrono::duration<double, std::milli>(now - last).count());
+
+    last = now;
+
+    if (intervals.size() < 120)
+        return;
+
+    std::nth_element(intervals.begin(), intervals.begin() + intervals.size() / 2, intervals.end());
+    const double measured = 1000.0 / intervals[intervals.size() / 2];
+    intervals.clear();
+
+    double rate = measured;
+    for (double standard : {60.0, 72.0, 80.0, 90.0, 120.0, 144.0})
+        if (std::abs(measured - standard) < standard * 0.04)
+            rate = standard;
+
+    if (std::abs(rate - MeasuredRefresh) > 0.5)
+        MeasuredRefresh = rate;
+}
+
 void UpdateFrameRate()
 {
+    MeasureRefresh();
     const double fps = TargetFrameRate();
 
     if (std::abs(fps - FrameRate) < 0.001)
@@ -341,6 +383,7 @@ void retro_run()
 {
     if (!loaded || !contextReady || finished)
         return;
+
 
     ApplyVRResolution(!started);
 
