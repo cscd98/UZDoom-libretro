@@ -14,6 +14,7 @@
 #include <array>
 #include <algorithm>
 #include <cmath>
+#include "i_time.h"
 
 bool GUICapture = false;
 CVAR(Bool, use_mouse, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
@@ -24,7 +25,7 @@ std::array<bool, RETROK_LAST> keys{};
 std::array<bool, 256> scanKeys{};
 bool padEnabled = true;
 Libretro::VRStickState vrSticks;
-double pendingTurn = 0;
+double pendingTurn = 0, smoothTurnRate = 0;
 Libretro::VRPressEdge calibrationButton;
 Libretro::VRPressEdge menuButton;
 Libretro::VRPressEdge keyboardBack;
@@ -112,6 +113,7 @@ void VRCommands(bool active)
     {
         vrSticks = {};
         pendingTurn = 0;
+        smoothTurnRate = 0;
         return;
     }
 
@@ -125,10 +127,12 @@ void VRCommands(bool active)
     const auto actions = vrSticks.Poll(x, y, grip, !smooth);
     pendingTurn += actions.turn * double(Libretro::VRTurnAngle());
 
+    // A rate in degrees per second, applied once per game tic so the number of frames per tic cannot vary the turn.
+    smoothTurnRate = 0;
     if (smooth && actions.smooth != 0.0f)
     {
         const float magnitude = std::max(0.0f, (std::abs(actions.smooth) - 0.15f) / 0.85f);
-        pendingTurn -= std::copysign(magnitude, actions.smooth) * 2.0 * Libretro::VRTurnAngle() / Libretro::FrameRate;
+        smoothTurnRate = -std::copysign(magnitude, actions.smooth) * 2.0 * Libretro::VRTurnAngle();
     }
 
     const int weapon = actions.weapon;
@@ -231,6 +235,7 @@ void ResetInput()
     padActions.fill(false);
     vrSticks = {};
     pendingTurn = 0;
+    smoothTurnRate = 0;
     keys.fill(false); scanKeys.fill(false); mouse.fill(false);
     textInput.clear(); GUICapture = false; mouseX = Width / 2; mouseY = Height / 2;
 }
@@ -248,9 +253,14 @@ void SetController(unsigned device)
 
 double ConsumeVRTurn()
 {
-    const double turn = pendingTurn;
+    const double turn = pendingTurn + smoothTurnRate / GameTicRate;
     pendingTurn = 0;
     return turn;
+}
+
+double VRSmoothTurnRate()
+{
+    return smoothTurnRate;
 }
 
 void PollInput()

@@ -17,6 +17,7 @@ bool VRControlsActive();
 bool VRSticksSwapped();
 void CalibrateVRAim();
 double ConsumeVRTurn();
+double VRSmoothTurnRate();
 void DrawVRLaser(const FRenderViewpoint &view, FRenderState &state);
 void SetVROverlayEye(int eye);
 bool ApplyVRHUD(VSMatrix &projection, int width, int height, bool weapon = false);

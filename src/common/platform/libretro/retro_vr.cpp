@@ -4,6 +4,7 @@
 #include "retro_vr_aim.h"
 #include "retro_vr_controls.h"
 #include "hw_vrmodes.h"
+#include "i_time.h"
 #include "r_utility.h"
 #include "v_video.h"
 #include "doomstat.h"
@@ -466,7 +467,13 @@ bool ApplyVREye(unsigned eyeIndex, FRenderViewpoint &view, VSMatrix &projection)
         bodyHeading.Reset(view.camera->Angles.Yaw.Radians());
     }
 
-    const double bodyYaw = bodyHeading.body - referenceYaw;
+    // The body heading only changes once per game tic. Add the part of the current tic's smooth turn
+    // that has elapsed so the view turns every frame instead of in tic-sized steps.
+    double partialTurn = 0;
+    if (gamestate == GS_LEVEL && !paused && menuactive == MENU_Off && GameTicRate > 0)
+        partialTurn = VRSmoothTurnRate() * Pi / 180 / GameTicRate * view.TicFrac;
+
+    const double bodyYaw = bodyHeading.body + partialTurn - referenceYaw;
     // Without motion-controller poses, retain independent mouse/stick aiming.
     // Its neutral tracking-space heading is the recentered heading, not the HMD.
     AimOrientation(weaponOrientation, referenceYaw + appliedYaw, -view.Angles.Pitch.Radians());
