@@ -26,7 +26,21 @@
 #include <cstdlib>
 #include <cstring>
 
-#if defined(_WIN32) && !defined(__LIBRETRO__)
+#if defined(__LIBRETRO__)
+#include <string>
+#include "retro_platform.h"
+// Route through the libretro log
+static void CPrint(const char* in)
+{
+	static std::string line;
+	line += in;
+	if (!line.empty() && line.back() == '\n')
+	{
+		Libretro::Log(RETRO_LOG_INFO, line.c_str());
+		line.clear();
+	}
+}
+#elif defined(_WIN32)
 // windows platform code uses special stdout handling, let's make sure to use that
 #include <windows.h>
 extern HANDLE StdOut;
@@ -123,7 +137,10 @@ void ibm437_to_utf8(char* result, char in);
 
 void vga_to_ansi(const uint8_t *buf)
 {
-#if defined(_WIN32) && !defined(__LIBRETRO__)
+#if defined(__LIBRETRO__)
+	// Log output is plain text, so no ANSI escapes
+	Support termcaps = Support::DUMB;
+#elif defined(_WIN32)
 	// FIXME: support for alternative terminals and old windows
 	Support termcaps = Support::FULL;
 #else

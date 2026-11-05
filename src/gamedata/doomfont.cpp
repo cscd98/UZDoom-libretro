@@ -26,6 +26,7 @@
 #include "engineerrors.h"
 #include "texturemanager.h"
 #include "v_font.h"
+#include "printf.h"
 
 #define HU_FONTSTART uint8_t('!')    // the first font characters
 #define HU_FONTEND   uint8_t('\377') // the last font characters
@@ -110,12 +111,20 @@ void InitDoomFonts()
 
 	if (fileSystem.CheckNumForName("FONTB_S") >= 0)
 	{
+#ifdef __LIBRETRO__
+		Printf("f 1\n");
+#else
 		printf("f 1\n");
+#endif
 		OriginalBigFont = new FFont("OriginalBigFont", "FONTB%02u", "defbigfont", HU_FONTSTART, HU_FONTSIZE, 1, -1, -1, false, true);
 	}
 	else
 	{
+#ifdef __LIBRETRO__
+		Printf("f 2\n");
+#else
 		printf("f 2\n");
+#endif
 		OriginalBigFont = new FFont("OriginalBigFont", nullptr, "bigfont", HU_FONTSTART, HU_FONTSIZE, 1, -1, -1, false, true);
 	}
 
