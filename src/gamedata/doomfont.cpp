@@ -26,7 +26,9 @@
 #include "engineerrors.h"
 #include "texturemanager.h"
 #include "v_font.h"
+#ifdef __LIBRETRO__
 #include "printf.h"
+#endif
 
 #define HU_FONTSTART uint8_t('!')    // the first font characters
 #define HU_FONTEND   uint8_t('\377') // the last font characters

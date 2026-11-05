@@ -204,8 +204,10 @@ void Log(retro_log_level level, const char *text)
 {
     if (logger)
         logger(level, "%s", text);
+#ifndef _WIN32
     else
         std::fprintf(stderr, "%s", text);
+#endif
 }
 
 void Present()
