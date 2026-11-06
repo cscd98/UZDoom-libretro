@@ -8,6 +8,7 @@ project(UZDoom)
 
 option(ENABLE_LIBRETRO "Build the libretro core" OFF)
 option(ENABLE_LIBRETRO_STATIC_BUILD "Build the libretro core with static libraries" OFF)
+option(ENABLE_LIBRETRO_STATIC_LIBVPX "Build the libretro core with static libvpx" ON)
 
 if(ENABLE_LIBRETRO)
     if(CMAKE_CXX_COMPILER MATCHES ".*(arm-webos-linux-gnueabi-|aarch64-webos-linux-gnu).*")
@@ -310,7 +311,7 @@ option( NO_OPENAL "Disable OpenAL sound support" OFF )
 find_package( BZip2 )
 
 # Always build vpx to reduce dependency on libretro builds
-if(ENABLE_LIBRETRO_STATIC_BUILD)
+if(ENABLE_LIBRETRO_STATIC_LIBVPX)
     include(LibretroVPX)
 else()
     find_package( VPX )
