@@ -1,5 +1,8 @@
 #include "retro_vfs.h"
 #include "fs_files.h"
+#ifdef __ANDROID__
+#include "retro_frontend_stack.h"
+#endif
 
 #include <algorithm>
 #include <cstdio>
@@ -23,6 +26,28 @@ struct ReadAPI
 
 ReadAPI api;
 retro_vfs_interface fullAPI{};
+
+#ifdef __ANDROID__
+retro_vfs_interface frontendAPI{};
+
+template<auto Member> struct VFSCallback;
+
+template<typename Result, typename... Args,
+    Result (*retro_vfs_interface::*Member)(Args...)>
+struct VFSCallback<Member>
+{
+    static Result Call(Args... args)
+    {
+        Result result{};
+        auto operation = [&] { result = (frontendAPI.*Member)(args...); };
+        RetroFrontendStack::Call([](void *data) {
+            (*static_cast<decltype(operation) *>(data))();
+        }, &operation);
+
+        return result;
+    }
+};
+#endif
 
 class VFSReader final : public FileSys::FileReaderInterface
 {
@@ -160,7 +185,6 @@ bool InitVFS(retro_environment_t environment)
     if (!vfs.open || !vfs.close || !vfs.size || !vfs.seek || !vfs.read)
         return false;
 
-    api = {vfs.open, vfs.close, vfs.size, vfs.seek, vfs.read};
     fullAPI.open = vfs.open; fullAPI.close = vfs.close; fullAPI.size = vfs.size;
     fullAPI.tell = vfs.tell; fullAPI.seek = vfs.seek; fullAPI.read = vfs.read;
     fullAPI.write = vfs.write; fullAPI.flush = vfs.flush;
@@ -174,6 +198,31 @@ bool InitVFS(retro_environment_t environment)
         fullAPI.dirent_is_dir = vfs.dirent_is_dir; fullAPI.closedir = vfs.closedir;
     }
 
+#ifdef __ANDROID__
+    frontendAPI = fullAPI;
+#define WRAP_VFS(member) \
+    if (frontendAPI.member) \
+        fullAPI.member = VFSCallback<&retro_vfs_interface::member>::Call
+    WRAP_VFS(open);
+    WRAP_VFS(close);
+    WRAP_VFS(size);
+    WRAP_VFS(tell);
+    WRAP_VFS(seek);
+    WRAP_VFS(read);
+    WRAP_VFS(write);
+    WRAP_VFS(flush);
+    WRAP_VFS(remove);
+    WRAP_VFS(rename);
+    WRAP_VFS(stat);
+    WRAP_VFS(mkdir);
+    WRAP_VFS(opendir);
+    WRAP_VFS(readdir);
+    WRAP_VFS(dirent_get_name);
+    WRAP_VFS(dirent_is_dir);
+    WRAP_VFS(closedir);
+#undef WRAP_VFS
+#endif
+    api = {fullAPI.open, fullAPI.close, fullAPI.size, fullAPI.seek, fullAPI.read};
     return true;
 }
 

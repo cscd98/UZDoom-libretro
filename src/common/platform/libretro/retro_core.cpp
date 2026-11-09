@@ -18,6 +18,9 @@
 #include <array>
 #include <algorithm>
 #include "retro_context.h"
+#ifdef __ANDROID__
+#include "retro_frontend_stack.h"
+#endif
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -44,6 +47,9 @@ retro_video_refresh_t video = nullptr;
 retro_input_poll_t poll = nullptr;
 retro_log_printf_t logger = nullptr;
 RetroContext frontendContext{}, engineContext{};
+#ifdef __ANDROID__
+RetroFrontendStack frontendStack(frontendContext, engineContext);
+#endif
 std::unique_ptr<unsigned char[]> stack;
 constexpr size_t StackSize = 16 * 1024 * 1024;
 bool loaded = false, started = false, finished = false, stopping = false, contextReady = false;
@@ -51,6 +57,15 @@ bool presented = false;
 bool resetRequested = false;
 unsigned resolutionWaitFrames = 0;
 std::string content, systemDirectory, saveDirectory;
+
+void ResumeEngine()
+{
+#ifdef __ANDROID__
+    frontendStack.Resume();
+#else
+    SwitchContext(&frontendContext, &engineContext);
+#endif
+}
 
 void EngineEntry()
 {
@@ -96,7 +111,7 @@ void Stop()
     if (started && !finished)
     {
         stopping = true;
-        SwitchContext(&frontendContext, &engineContext);
+        ResumeEngine();
     }
 
     DestroyContext(engineContext, frontendContext);
@@ -449,7 +464,7 @@ void retro_run()
 
     presented = false;
     I_RetroAdvanceFrame();
-    SwitchContext(&frontendContext, &engineContext);
+    ResumeEngine();
 
     if (finished)
     {
