@@ -48,7 +48,11 @@ EXTERN_CVAR(Bool, r_dithertransparency)
 EXTERN_CVAR(Color, gl_cullcolor)
 
 thread_local bool isWorkerThread;
+#ifdef __LIBRETRO__
+ctpl::thread_pool* renderPool = nullptr;
+#else
 ctpl::thread_pool renderPool(1);
+#endif
 bool inited = false;
 
 const int MAXDITHERACTORS = 20; // Maximum number of enemies that can set dither-transparency flags
@@ -1091,6 +1095,24 @@ void HWDrawInfo::RenderOrthoNoFog()
 	}
 }
 
+#ifdef __LIBRETRO__
+void InitRenderPool()
+{
+    if (!renderPool)
+        renderPool = new ctpl::thread_pool(1);
+}
+
+void HWShutdownRenderPool()
+{
+	if (renderPool)
+	{
+		renderPool->stop(true);
+		delete renderPool;
+		renderPool = nullptr;
+	}
+}
+#endif
+
 void HWDrawInfo::RenderBSP(void *node, bool drawpsprites)
 {
 	ClearDitherTargets();
@@ -1111,9 +1133,17 @@ void HWDrawInfo::RenderBSP(void *node, bool drawpsprites)
 	if (multithread)
 	{
 		jobQueue.ReleaseAll();
+#ifdef __LIBRETRO__
+		if (!renderPool)
+			InitRenderPool();
+		auto future = renderPool->push([&](int id) {
+			WorkerThread();
+		});
+#else
 		auto future = renderPool.push([&](int id) {
 			WorkerThread();
 		});
+#endif
 		if (Viewpoint.bDoOrtho && ((Level->flags3 & LEVEL3_NOFOGOFWAR) || !r_radarclipper)) RenderOrthoNoFog();
 		else RenderBSPNode(node);
 
@@ -1146,10 +1176,3 @@ void HWDrawInfo::RenderBSP(void *node, bool drawpsprites)
 	if (drawpsprites)
 		PreparePlayerSprites(Viewpoint.sector, in_area);
 }
-
-#ifdef __LIBRETRO__
-void HWShutdownRenderPool()
-{
-	renderPool.stop(true);
-}
-#endif

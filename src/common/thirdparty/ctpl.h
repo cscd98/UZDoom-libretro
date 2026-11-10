@@ -30,6 +30,9 @@
 #include <mutex>
 #include <queue>
 
+#ifdef __LIBRETRO__
+#include "retro_platform.h"
+#endif
 
 
 // thread pool to run user's functors with signature

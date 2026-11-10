@@ -9,6 +9,7 @@ extern retro_hw_render_callback Hardware;
 extern unsigned Width, Height, MaxWidth, MaxHeight;
 extern bool GLES, UseVulkan;
 extern double FrameRate, MeasuredRefresh;
+bool IsLoaded();
 void UpdateFrameRate();
 void Log(enum retro_log_level level, const char *text);
 void Present();

@@ -241,6 +241,11 @@ const char *SystemDirectory()
     return systemDirectory.c_str();
 }
 
+bool IsLoaded()
+{
+    return loaded;
+}
+
 } // namespace Libretro
 
 void LibretroEndFrame()
