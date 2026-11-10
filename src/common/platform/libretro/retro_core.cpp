@@ -30,6 +30,7 @@
 int GameMain();
 void LibretroUnloadSndFile();
 extern FArgs *Args;
+extern void HWShutdownRenderPool();
 
 namespace Libretro
 {
@@ -301,6 +302,7 @@ void retro_init()
 
 void retro_deinit()
 {
+    HWShutdownRenderPool();
     Stop();
     LibretroUnloadSndFile();
     InitVFS(nullptr);

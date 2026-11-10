@@ -1146,3 +1146,10 @@ void HWDrawInfo::RenderBSP(void *node, bool drawpsprites)
 	if (drawpsprites)
 		PreparePlayerSprites(Viewpoint.sector, in_area);
 }
+
+#ifdef __LIBRETRO__
+void HWShutdownRenderPool()
+{
+	renderPool.stop(true);
+}
+#endif
