@@ -132,7 +132,8 @@ elseif(NOT APPLE)
 	endif()
 endif()
 
-if(WIN32)
+# MCI (CD audio) is missing from winmm.dll on UWP/Xbox, so libretro must not import it.
+if(WIN32 AND NOT ENABLE_LIBRETRO)
 	target_sources(zmusic-obj
 	INTERFACE
 		musicformats/win32/i_cd.cpp

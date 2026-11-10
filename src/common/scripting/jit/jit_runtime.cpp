@@ -836,7 +836,14 @@ static int CaptureStackTrace(int max_frames, void **out_frames)
 #endif
 }
 
-#ifdef WIN32
+#if defined(WIN32) && defined(__LIBRETRO__)
+// dbghelp.dll is not available to UWP/Xbox, so it must not be imported.
+class NativeSymbolResolver
+{
+public:
+	FString GetName(void *frame) { return FString(); }
+};
+#elif defined(WIN32)
 class NativeSymbolResolver
 {
 public:
