@@ -379,6 +379,17 @@ bool retro_load_game(const retro_game_info *info)
     Hardware.context_type = UseVulkan ? RETRO_HW_CONTEXT_VULKAN : GLES ? RETRO_HW_CONTEXT_OPENGLES2 : RETRO_HW_CONTEXT_OPENGL_CORE;
     Hardware.version_major = GLES ? 2 : 3;
     Hardware.version_minor = GLES ? 0 : 3;
+#ifdef _WIN32
+    if (!UseVulkan && !GLES)
+    {
+        // RetroArch's GL menu fonts use legacy luminance/alpha textures.
+        // WGL interprets a 3.1+ version request as a core profile, even when
+        // context_type is OPENGL. Request its default compatibility context;
+        // the engine still checks that the resulting GL version is >= 3.3.
+        Hardware.context_type = RETRO_HW_CONTEXT_OPENGL;
+        Hardware.version_major = Hardware.version_minor = 0;
+    }
+#endif
     Hardware.context_reset = ContextReset;
     Hardware.context_destroy = ContextDestroy;
     Hardware.depth = true;
@@ -446,6 +457,8 @@ void retro_run()
     BeginVRFrame();
     UpdateFrameRate();
 
+    const bool frontendStateSaved = SaveFrontendGLState(!started);
+
     if (started)
     {
         ApplyOptions();
@@ -462,6 +475,8 @@ void retro_run()
         }
         catch (const std::exception &error)
         {
+            if (frontendStateSaved)
+                RestoreFrontendGLState();
             Log(RETRO_LOG_ERROR, error.what());
             finished = true;
             Environment(RETRO_ENVIRONMENT_SHUTDOWN, nullptr);
@@ -474,6 +489,9 @@ void retro_run()
     presented = false;
     I_RetroAdvanceFrame();
     ResumeEngine();
+
+    if (frontendStateSaved)
+        RestoreFrontendGLState();
 
     if (finished)
     {

@@ -133,7 +133,7 @@ extern "C" void *LibretroGLGetProcAddress(const char *name)
 namespace Libretro
 {
 #ifdef _WIN32
-namespace { RetroGLState engineGLState; }
+namespace { RetroGLState engineGLState, frontendGLState; }
 #endif
 
 void SaveGLState()
@@ -149,6 +149,31 @@ void RestoreGLState()
 #ifdef _WIN32
     if (!UseVulkan && !GLES)
         engineGLState.Restore();
+#endif
+}
+
+bool SaveFrontendGLState(bool initialize)
+{
+#ifdef _WIN32
+    if (!UseVulkan && !GLES)
+    {
+        // Capture the frontend state before engine initialization on frame one.
+        if (initialize && !ogl_LoadFunctions())
+            return false;
+
+        frontendGLState.Save();
+        return true;
+    }
+#endif
+    return false;
+}
+
+void RestoreFrontendGLState()
+{
+#ifdef _WIN32
+    // The frontend's real default FBO must stay zero. Bypass the engine's
+    // framebuffer-zero redirection when restoring the frontend's bindings.
+    frontendGLState.Restore(reinterpret_cast<decltype(glBindFramebuffer)>(bindFramebuffer));
 #endif
 }
 

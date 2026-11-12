@@ -15,6 +15,8 @@ void Log(enum retro_log_level level, const char *text);
 void Present();
 void SaveGLState();
 void RestoreGLState();
+bool SaveFrontendGLState(bool initialize);
+void RestoreFrontendGLState();
 const char *SaveDirectory();
 const char *SystemDirectory();
 void SetAudioSample(retro_audio_sample_t callback);

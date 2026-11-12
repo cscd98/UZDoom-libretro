@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gl_load/gl_load.h"
+#include <array>
 #include <vector>
 
 namespace Libretro
@@ -11,6 +12,13 @@ class RetroGLState
 {
     struct TextureUnit { GLint texture, sampler; };
     std::vector<TextureUnit> units;
+    std::vector<std::array<GLfloat, 4>> attributes;
+    static constexpr GLenum pixelStoreNames[] = {
+        GL_PACK_ALIGNMENT, GL_UNPACK_ALIGNMENT, GL_PACK_ROW_LENGTH, GL_UNPACK_ROW_LENGTH,
+        GL_PACK_SKIP_PIXELS, GL_UNPACK_SKIP_PIXELS, GL_PACK_SKIP_ROWS, GL_UNPACK_SKIP_ROWS
+    };
+    GLint pixelStore[sizeof(pixelStoreNames) / sizeof(pixelStoreNames[0])];
+    GLint packBuffer, unpackBuffer;
 
     static constexpr GLenum capabilities[] = {
         GL_BLEND, GL_CULL_FACE, GL_DEPTH_TEST, GL_STENCIL_TEST, GL_SCISSOR_TEST,
@@ -47,6 +55,12 @@ public:
         glGetIntegerv(GL_CURRENT_PROGRAM, &program);
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
+        glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &packBuffer);
+        glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpackBuffer);
+
+        for (unsigned i = 0; i < sizeof(pixelStore) / sizeof(pixelStore[0]); ++i)
+            glGetIntegerv(pixelStoreNames[i], &pixelStore[i]);
+
         glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture);
         glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer);
         glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFramebuffer);
@@ -107,15 +121,28 @@ public:
         }
 
         glActiveTexture(activeTexture);
+
+        glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &count);
+        attributes.resize(count);
+
+        // Querying the current value of attribute zero is invalid in core GL.
+        for (unsigned i = 1; i < attributes.size(); ++i)
+            glGetVertexAttribfv(i, GL_CURRENT_VERTEX_ATTRIB, attributes[i].data());
     }
 
-    void Restore()
+    void Restore(decltype(glBindFramebuffer) bindFramebuffer = glBindFramebuffer)
     {
         glUseProgram(program);
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, packBuffer);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, unpackBuffer);
+
+        for (unsigned i = 0; i < sizeof(pixelStore) / sizeof(pixelStore[0]); ++i)
+            glPixelStorei(pixelStoreNames[i], pixelStore[i]);
+
+        bindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+        bindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
         glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
         glPolygonMode(GL_FRONT_AND_BACK, polygonMode[0]);
@@ -146,6 +173,8 @@ public:
         }
 
         glActiveTexture(activeTexture);
+        for (unsigned i = 1; i < attributes.size(); ++i)
+            glVertexAttrib4fv(i, attributes[i].data());
     }
 };
 }
