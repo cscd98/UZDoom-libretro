@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <cstdio>
 
 int P_LibretroPlayerCommandTic();
 
@@ -35,7 +34,6 @@ bool vrInputProfile = false;
 VRBodyHeading bodyHeading;
 AActor *bodyActor = nullptr;
 unsigned renderedEyes = 0;
-unsigned movementTraceTicks = 0, movementTraceSamples = 0;
 retro_vr_frame_state frame{};
 float origin[3]{}, headPosition[3]{}, headOrientation[4]{};
 bool controllerAimValid = false;
@@ -90,7 +88,6 @@ void ResetVR()
     stereo = immersive = referenceValid = vrInputProfile = false;
     bodyActor = nullptr;
     renderedEyes = 0;
-    movementTraceTicks = movementTraceSamples = 0;
     overlayEye = -1;
     appliedYaw = 0;
     controllerAimValid = false;
@@ -364,7 +361,6 @@ void ApplyVRInput(usercmd_t &command)
         Angles(controllerAim.orientation, yaw, pitch, roll);
     }
 
-    const usercmd_t legacyCommand = command;
     const double targetYaw = controllerAimValid ? std::remainder(yaw-referenceYaw, 2*Pi) : appliedYaw;
     double forward = 0, side = 0;
     bool moving = false;
@@ -409,46 +405,6 @@ void ApplyVRInput(usercmd_t &command)
     }
 
     appliedYaw = targetYaw;
-
-    // Bounded on-device diagnostic: correlate frontend axes, generated commands
-    // and observed actor motion while reproducing the reported movement fault.
-    if (InputState && ++movementTraceTicks % 7 == 0 && movementTraceSamples < 300)
-    {
-        ++movementTraceSamples;
-        int axes[4];
-        for (unsigned stick = 0; stick < 2; ++stick)
-        {
-            for (unsigned axis = 0; axis < 2; ++axis)
-            {
-                axes[stick*2+axis] = InputState(0, RETRO_DEVICE_ANALOG, stick, axis);
-            }
-        }
-
-        unsigned buttons = 0;
-        for (unsigned button = 0; button < 16; ++button)
-        {
-            if (InputState(0, RETRO_DEVICE_JOYPAD, 0, button))
-            {
-                buttons |= 1u << button;
-            }
-        }
-
-        char message[768];
-        std::snprintf(message, sizeof(message),
-            "VRMOVE tick=%d sticks=(%d,%d)/(%d,%d) move_stick=%u buttons=%04x "
-            "legacy=(%d,%d,%d) cmd=(%d,%d,%d) "
-            "head=%.2f ref=%.2f aim=%.2f body=%.2f queued=%.2f actor=%.2f "
-            "pos=(%.3f,%.3f) vel=(%.3f,%.3f) tracked=%d\n",
-            gametic, axes[0], axes[1], axes[2], axes[3],
-            VRPadStick(RETRO_DEVICE_INDEX_ANALOG_LEFT, VRSticksSwapped()), buttons,
-            int(legacyCommand.forwardmove), int(legacyCommand.sidemove), int(legacyCommand.yaw),
-            int(command.forwardmove), int(command.sidemove), int(command.yaw),
-            headYaw*180/Pi, referenceYaw*180/Pi, targetYaw*180/Pi,
-            bodyHeading.body*180/Pi, bodyHeading.commanded*180/Pi, player.mo->Angles.Yaw.Degrees(),
-            player.mo->X(), player.mo->Y(), player.mo->Vel.X, player.mo->Vel.Y, int(controllerAimValid));
-
-        Log(RETRO_LOG_INFO, message);
-    }
 }
 
 bool ApplyVREye(unsigned eyeIndex, FRenderViewpoint &view, VSMatrix &projection)

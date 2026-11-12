@@ -107,7 +107,7 @@ else()
 endif()
 
 if( NOT NO_OPENAL )
-    if(ENABLE_LIBRETRO AND (ANDROID OR CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$"))
+    if(ENABLE_LIBRETRO AND (WIN32 OR ANDROID OR CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$"))
         list(APPEND PROJECT_LIBRARIES OpenAL::OpenAL)
     elseif ( "vcpkg-openal-soft" IN_LIST VCPKG_MANIFEST_FEATURES )
 		# Statically link to OpenAL from vcpkg

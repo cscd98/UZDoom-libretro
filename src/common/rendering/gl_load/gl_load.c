@@ -146,7 +146,13 @@ static PROC WinGetProcAddress(const char *name)
 	return (PROC)GetProcAddress(glMod, (LPCSTR)name);
 }
 
+#if defined(__LIBRETRO__)
+/* Use the frontend's context and default-framebuffer translation on Windows too. */
+extern void *LibretroGLGetProcAddress(const char *name);
+#define IntGetProcAddress(name) LibretroGLGetProcAddress((const char *)name)
+#else
 #define IntGetProcAddress(name) WinGetProcAddress(name)
+#endif
 #else
 	#if defined(__LIBRETRO__)
 		extern void *LibretroGLGetProcAddress(const char *name);

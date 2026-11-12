@@ -11,6 +11,9 @@
 #include "i_system.h"
 #include "c_cvars.h"
 #include "printf.h"
+#ifdef _WIN32
+#include "retro_gl_state.h"
+#endif
 
 IVideo *Video = nullptr;
 CVAR(Bool, gl_debug, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
@@ -129,6 +132,26 @@ extern "C" void *LibretroGLGetProcAddress(const char *name)
 
 namespace Libretro
 {
+#ifdef _WIN32
+namespace { RetroGLState engineGLState; }
+#endif
+
+void SaveGLState()
+{
+#ifdef _WIN32
+    if (!UseVulkan && !GLES)
+        engineGLState.Save(Hardware.get_current_framebuffer ? GLuint(Hardware.get_current_framebuffer()) : 0);
+#endif
+}
+
+void RestoreGLState()
+{
+#ifdef _WIN32
+    if (!UseVulkan && !GLES)
+        engineGLState.Restore();
+#endif
+}
+
 void ResizeOutput()
 {
     if (screen) screen->DFrameBuffer::Update();

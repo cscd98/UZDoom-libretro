@@ -13,6 +13,8 @@ bool IsLoaded();
 void UpdateFrameRate();
 void Log(enum retro_log_level level, const char *text);
 void Present();
+void SaveGLState();
+void RestoreGLState();
 const char *SaveDirectory();
 const char *SystemDirectory();
 void SetAudioSample(retro_audio_sample_t callback);

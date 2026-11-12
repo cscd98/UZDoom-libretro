@@ -165,6 +165,10 @@ void FGLRenderer::BindToFrameBuffer(FTexture *tex)
 
 void FGLRenderer::BeginFrame()
 {
+#ifdef __LIBRETRO__
+	// The frontend draws between core frames and may unbind our VAO.
+	glBindVertexArray(mVAOID);
+#endif
 	mScreenBuffers->Setup(screen->mScreenViewport.width, screen->mScreenViewport.height, screen->mSceneViewport.width, screen->mSceneViewport.height);
 	mSaveBuffers->Setup(SAVEPICWIDTH, SAVEPICHEIGHT, SAVEPICWIDTH, SAVEPICHEIGHT);
 }

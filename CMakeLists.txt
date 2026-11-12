@@ -574,13 +574,18 @@ install(DIRECTORY docs/
 option( DYN_OPENAL "Dynamically load OpenAL" ON )
 option( BUILD_NONFREE "Build non-free assets used by commercial games" ON )
 
-if(ENABLE_LIBRETRO AND (ANDROID OR CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$"))
-    set(LIBRETRO_OPENAL_SOURCE "" CACHE PATH "OpenAL Soft source tree for the mobile static mixer")
+if(ENABLE_LIBRETRO AND (WIN32 OR ANDROID OR CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$"))
+    set(LIBRETRO_OPENAL_SOURCE "" CACHE PATH "OpenAL Soft source tree for the static libretro mixer")
     if(NOT LIBRETRO_OPENAL_SOURCE)
+        set(libretro_openal_tag 1.23.1)
+        if(WIN32)
+            # Newer MinGW versions need the updated standard-library includes.
+            set(libretro_openal_tag 1.24.3)
+        endif()
         include(FetchContent)
         FetchContent_Declare(libretro_openal
             GIT_REPOSITORY https://github.com/kcat/openal-soft.git
-            GIT_TAG 1.23.1
+            GIT_TAG ${libretro_openal_tag}
             GIT_SHALLOW TRUE)
         # Populate separately: the mixer options below must precede add_subdirectory.
         FetchContent_GetProperties(libretro_openal)
@@ -596,7 +601,7 @@ if(ENABLE_LIBRETRO AND (ANDROID OR CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$"))
     set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
     set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
-    foreach(backend ALSA OSS SOLARIS SNDIO PIPEWIRE PULSEAUDIO JACK PORTAUDIO OBOE OPENSL SDL2 WAVE COREAUDIO)
+    foreach(backend ALSA OSS SOLARIS SNDIO PIPEWIRE PULSEAUDIO JACK PORTAUDIO OBOE OPENSL SDL2 WAVE COREAUDIO WASAPI DSOUND WINMM)
         set(ALSOFT_BACKEND_${backend} OFF CACHE BOOL "" FORCE)
     endforeach()
     add_subdirectory("${LIBRETRO_OPENAL_SOURCE}" "android-openal" EXCLUDE_FROM_ALL)

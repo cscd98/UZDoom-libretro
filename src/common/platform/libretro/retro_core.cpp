@@ -251,7 +251,9 @@ bool IsLoaded()
 void LibretroEndFrame()
 {
     using namespace Libretro;
+    SaveGLState();
     SwitchContext(&engineContext, &frontendContext);
+    RestoreGLState();
     if (stopping)
         throw CExitEvent(0);
 
