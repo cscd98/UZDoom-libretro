@@ -147,7 +147,8 @@ void ContextDestroy()
 
 } // namespace
 
-// Run at the largest whole fraction of the target refresh rate within 90 Hz, falling back to one tic per frame.
+// Match the frontend refresh rate; game logic still advances at 35 tics per second.
+// Fall back to one tic per frame when the frontend cannot provide a usable rate.
 static double TargetFrameRate()
 {
     float refresh = 0;
@@ -156,8 +157,8 @@ static double TargetFrameRate()
     if (MeasuredRefresh > 0 && VRActive())
         refresh = float(MeasuredRefresh);
 
-    if ((got || MeasuredRefresh > 0) && refresh >= 35.0f)
-        return refresh / std::max(1.0, std::ceil(refresh / 90.0 - 0.001));
+    if ((got || MeasuredRefresh > 0) && std::isfinite(refresh) && refresh >= 35.0f)
+        return refresh;
 
     return 35.0;
 }
@@ -324,7 +325,7 @@ void retro_deinit()
 
 void retro_get_system_info(retro_system_info *info)
 {
-    *info = {"UZDoom", "experimental", "wad|iwad|pk3|pk7|ipk3|ipk7", true, false};
+    *info = {"UZDoom", "experimental", "wad|iwad|pwad|pk3|ipk3|pkz|pk7|ipk7", true, false};
 }
 
 void retro_get_system_av_info(retro_system_av_info *info)
