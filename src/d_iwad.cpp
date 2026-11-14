@@ -22,6 +22,9 @@
 **
 */
 
+#ifdef __LIBRETRO__
+#include "common/platform/libretro/retro_platform.h"
+#endif
 #include "c_cvars.h"
 #include "cmdlib.h"
 #include "c_console.h"
@@ -472,8 +475,55 @@ int FIWadManager::CheckIWADInfo(const char* fn)
 //
 //==========================================================================
 
+#ifdef __LIBRETRO__
+void FIWadManager::PrepareFrontendContent()
+{
+	const char *path = Args->CheckValue(FArg_iwad);
+	if (!path)
+		return;
+
+	FString content = path;
+
+	// ScanIWAD alone cannot classify mods: Doom II only requires MAP01.
+	// Run explicit IWAD containers, known base-game names (including games
+	// with PWAD headers), and the IWAD signature for renamed base games.
+	const char *ext = strrchr(content.GetChars(), '.');
+
+	if (ext && (!stricmp(ext, ".iwad") || !stricmp(ext, ".ipk3") || !stricmp(ext, ".ipk7")))
+		return;
+
+	FString filename = ExtractFileBase(content.GetChars(), true);
+
+	for (const auto &name : mIWadNames)
+	{
+		if (!name.CompareNoCase(filename))
+			return;
+	}
+
+	FileSys::FileReader file;
+	char signature[4];
+
+	if (file.OpenFile(path) && file.Read(signature, sizeof(signature)) == sizeof(signature)
+		&& !memcmp(signature, "IWAD", sizeof(signature)))
+		return;
+
+	int arg = Args->CheckParm(FArg_iwad);
+
+	Args->RemoveArg(arg + 1);
+	Args->RemoveArg(arg);
+	Args->AppendRawArg("-file");
+	Args->AppendRawArg(content);
+}
+#endif
+
 void FIWadManager::CollectSearchPaths()
 {
+#ifdef __LIBRETRO__
+	// Search beside the selected mod first, even with an existing config.
+	FString contentdir = ExtractFilePath(Libretro::ContentPath());
+	mSearchPaths.Push(contentdir.IsEmpty() ? FString(".") : contentdir);
+	mSearchPaths.Push(Libretro::SystemDirectory());
+#endif
 	if (GameConfig->SetSection("IWADSearch.Directories"))
 	{
 		const char *key;

@@ -241,6 +241,11 @@ const char *SystemDirectory()
     return systemDirectory.c_str();
 }
 
+const char *ContentPath()
+{
+    return content.c_str();
+}
+
 bool IsLoaded()
 {
     return loaded;
@@ -319,7 +324,7 @@ void retro_deinit()
 
 void retro_get_system_info(retro_system_info *info)
 {
-    *info = {"UZDoom", "experimental", "wad|iwad", true, false};
+    *info = {"UZDoom", "experimental", "wad|iwad|pk3|pk7|ipk3|ipk7", true, false};
 }
 
 void retro_get_system_av_info(retro_system_av_info *info)

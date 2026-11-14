@@ -19,6 +19,7 @@ bool SaveFrontendGLState(bool initialize);
 void RestoreFrontendGLState();
 const char *SaveDirectory();
 const char *SystemDirectory();
+const char *ContentPath();
 void SetAudioSample(retro_audio_sample_t callback);
 void SetAudioBatch(retro_audio_sample_batch_t callback);
 void InitAudio();

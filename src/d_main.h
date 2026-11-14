@@ -153,6 +153,9 @@ class FIWadManager
 public:
 
 	FIWadManager(const char *fn, const char *fnopt);
+#ifdef __LIBRETRO__
+	void PrepareFrontendContent();
+#endif
 	const FIWADInfo *FindIWAD(std::vector<FileSys::ResourceName>& wadfiles, const char *iwad, const char *basewad, const char *optionalwad);
 	const FString *GetAutoname(unsigned int num) const
 	{

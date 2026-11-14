@@ -4241,6 +4241,9 @@ static int D_DoomMain_Internal (void)
 	FString optionalwad = BaseFileSearch(OPTIONALWAD, NULL, true, GameConfig);
 
 	iwad_man = new FIWadManager(basewad.GetChars(), optionalwad.GetChars());
+#ifdef __LIBRETRO__
+	iwad_man->PrepareFrontendContent();
+#endif
 
 	// Now that we have the IWADINFO, initialize the autoload ini sections.
 	GameConfig->DoAutoloadSetup(iwad_man);
