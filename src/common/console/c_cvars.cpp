@@ -66,6 +66,11 @@ void C_InstallHandlers(ConsoleCallbacks* cb)
 
 void C_InitCVars(int which)
 {
+#ifdef __LIBRETRO__
+	// Defer callbacks until engine startup has recreated their dependencies.
+	FBaseCVar::DisableCallbacks();
+#endif
+
 	AutoSegs::CVarDecl.ForEach([](FCVarDecl* cvInfo)
 	{
 		FBaseCVar* newcvar;

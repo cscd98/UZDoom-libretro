@@ -4391,6 +4391,11 @@ void SignalHandler(int signal)
 
 int GameMain()
 {
+#ifdef __LIBRETRO__
+	restart = 0;
+	gameloop_abort = false;
+#endif
+
 #ifndef __LIBRETRO__
 	// On Windows, prefer the native win32 backend.
 	// On other platforms, use SDL until the other backends are more mature.
