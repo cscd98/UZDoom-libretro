@@ -286,9 +286,6 @@ void retro_set_environment(retro_environment_t cb)
     if (cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && version >= 2)
         RegisterOptions(false);
 
-    retro_keyboard_callback keyboard{KeyboardEvent};
-    cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard);
-
     bool noGame = false;
     cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &noGame);
 }
@@ -304,6 +301,9 @@ void retro_init()
 {
     if (!Environment)
         return;
+
+    retro_keyboard_callback keyboard{KeyboardEvent};
+    Environment(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard);
 
     retro_log_callback logging{};
     if (Environment(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))

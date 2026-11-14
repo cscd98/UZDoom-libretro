@@ -1,5 +1,6 @@
 #include "retro_platform.h"
 #include "retro_keys.h"
+#include "retro_text_input.h"
 #include "retro_vr.h"
 #include "retro_vr_controls.h"
 #include "c_dispatch.h"
@@ -10,6 +11,7 @@
 #include "c_buttons.h"
 #include "keydef.h"
 #include "menustate.h"
+#include "menu.h"
 #include <vector>
 #include <array>
 #include <algorithm>
@@ -141,7 +143,7 @@ void VRCommands(bool active)
 }
 
 std::array<bool, 3> mouse{};
-std::vector<uint32_t> textInput;
+Libretro::TextInput textInput;
 int mouseX = 320, mouseY = 240;
 
 void Key(unsigned code, bool down, unsigned character = 0)
@@ -237,13 +239,12 @@ void ResetInput()
     pendingTurn = 0;
     smoothTurnRate = 0;
     keys.fill(false); scanKeys.fill(false); mouse.fill(false);
-    textInput.clear(); GUICapture = false; mouseX = Width / 2; mouseY = Height / 2;
+    textInput = {}; GUICapture = false; mouseX = Width / 2; mouseY = Height / 2;
 }
 
-void KeyboardEvent(bool down, unsigned, uint32_t character, uint16_t)
+void KeyboardEvent(bool down, unsigned key, uint32_t character, uint16_t modifiers)
 {
-    if (down && character >= 32 && character <= 0xffff && textInput.size() < 64)
-        textInput.push_back(character);
+    textInput.KeyboardEvent(down, key, character, modifiers);
 }
 
 void SetController(unsigned device)
@@ -284,16 +285,6 @@ void PollInput()
         GUICapture = capture;
     }
 
-    if (GUICapture) for (auto character : textInput)
-    {
-        event_t event{};
-        event.type = EV_GUI_Event; event.subtype = EV_GUI_Char;
-        event.data1 = static_cast<int16_t>(character);
-        D_PostEvent(&event);
-    }
-
-    textInput.clear();
-
     std::array<bool, 256> next{};
     std::array<unsigned, 256> characters{};
     const bool vrControls = padEnabled && VRControlsActive() && !GUICapture;
@@ -311,14 +302,19 @@ void PollInput()
 
     if (GUICapture && menuactive != MENU_Off)
     {
-        next[KEY_ENTER] = next[KEY_ENTER] || keys[RETROK_x];
-        if (backPressed)
+        // Text fields need literal X/Z, including when opened with a controller.
+        const bool enteringText = CurrentMenu && CurrentMenu->IsKindOf("TextEnterMenu");
+        if (!enteringText)
         {
-            Key(KEY_ESCAPE, true, RETROK_ESCAPE);
-            Key(KEY_ESCAPE, false, RETROK_ESCAPE);
+            next[KEY_ENTER] = next[KEY_ENTER] || keys[RETROK_x];
+            if (backPressed)
+            {
+                Key(KEY_ESCAPE, true, RETROK_ESCAPE);
+                Key(KEY_ESCAPE, false, RETROK_ESCAPE);
+            }
+            next[ScanCode(RETROK_x)] = false;
+            next[ScanCode(RETROK_z)] = false;
         }
-        next[ScanCode(RETROK_x)] = false;
-        next[ScanCode(RETROK_z)] = false;
 
         if (padEnabled && VRControlsActive())
         {
@@ -340,7 +336,9 @@ void PollInput()
 
     // Keep Escape/Start latched across GUI capture transitions. A held button
     // must never become a fresh key-down just because it opened the menu.
-    const bool menuDown = next[KEY_ESCAPE] || (padEnabled &&
+    // Like PollKeys, ignore RetroPad input while a keyboard key is held:
+    // RetroArch maps Enter to Start, which would cancel text entry with Escape.
+    const bool menuDown = next[KEY_ESCAPE] || (padEnabled && !keyboardActive &&
         InputState(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START));
 
     if (menuButton.Changed(menuDown))
@@ -362,6 +360,16 @@ void PollInput()
             next[scan] = false;
         }
     }
+
+    textInput.Poll(keys, GUICapture,
+        [&](unsigned key) { const auto scan = ScanCode(key); return scan && next[scan]; },
+        [](uint32_t character) {
+            event_t event{};
+            event.type = EV_GUI_Event;
+            event.subtype = EV_GUI_Char;
+            event.data1 = static_cast<int16_t>(character);
+            D_PostEvent(&event);
+        });
 
     for (unsigned scan = 1; scan < next.size(); ++scan)
         if (next[scan] != scanKeys[scan])
