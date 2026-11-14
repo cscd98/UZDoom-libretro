@@ -69,6 +69,12 @@ if(NOT WIN32 AND NOT APPLE)
 	determine_package_config_dependency(ZMUSIC_PACKAGE_DEPENDENCIES TARGET Threads::Threads MODULE Threads)
 endif()
 
+if(ENABLE_LIBRETRO)
+	# The core must be self-contained on platforms without system audio codecs.
+	# Do not define DYN_SNDFILE/DYN_MPG123: use the linked APIs directly.
+	target_compile_definitions(zmusic-obj INTERFACE HAVE_SNDFILE HAVE_MPG123)
+	target_link_libraries(zmusic-obj INTERFACE libretro_audio)
+else()
 if ("vcpkg-libsndfile" IN_LIST VCPKG_MANIFEST_FEATURES)
 	set(DYN_SNDFILE 0)
 else()
@@ -103,6 +109,8 @@ elseif(NOT ("vcpkg-libsndfile" IN_LIST VCPKG_MANIFEST_FEATURES))
 		determine_package_config_dependency(ZMUSIC_PACKAGE_DEPENDENCIES TARGET mpg123 MODULE MPG123)
 	endif()
 endif()
+
+endif() # ENABLE_LIBRETRO
 
 # System MIDI support
 if(WIN32)

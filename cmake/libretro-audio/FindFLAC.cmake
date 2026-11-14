@@ -1,0 +1,5 @@
+if(NOT TARGET FLAC::FLAC)
+    message(FATAL_ERROR "Build bundled FLAC before libsndfile")
+endif()
+set(FLAC_FOUND TRUE)
+set(FLAC_VERSION 1.4.3)

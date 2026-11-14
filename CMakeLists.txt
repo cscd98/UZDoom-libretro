@@ -544,6 +544,10 @@ else()
 endif()
 
 # ZMUSIC
+if(ENABLE_LIBRETRO)
+    include(cmake/LibretroAudio.cmake)
+    libretro_build_audio()
+endif()
 add_subdirectory( libraries/ZMusic )
 set( ZMUSIC_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/libraries/ZMusic" )
 set( ZMUSIC_INCLUDE_DIR ${ZMUSIC_ROOT_PATH}/include )

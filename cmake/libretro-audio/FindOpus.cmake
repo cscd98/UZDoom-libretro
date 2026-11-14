@@ -1,0 +1,6 @@
+if(NOT TARGET Opus::opus)
+    message(FATAL_ERROR "Build bundled Opus before libsndfile")
+endif()
+set(Opus_FOUND TRUE)
+set(OPUS_FOUND TRUE)
+set(Opus_VERSION 1.5.2)

@@ -1,0 +1,7 @@
+if(NOT TARGET Ogg::ogg)
+    message(FATAL_ERROR "Build bundled Ogg first.")
+endif()
+set(Ogg_FOUND TRUE)
+set(OGG_FOUND TRUE)
+set(OGG_LIBRARIES Ogg::ogg)
+set(Ogg_VERSION 1.3.5)
