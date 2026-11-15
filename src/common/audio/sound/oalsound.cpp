@@ -30,6 +30,9 @@
 #include "i_module.h"
 #include "oalsound.h"
 #include "printf.h"
+#ifdef __LIBRETRO__
+#include "retro_platform.h"
+#endif
 
 const char *GetSampleTypeName(SampleType type);
 const char *GetChannelConfigName(ChannelConfig chan);
@@ -672,7 +675,7 @@ OpenALSoundRenderer::OpenALSoundRenderer()
 	attribs.Push(ALC_FORMAT_TYPE_SOFT);
 	attribs.Push(ALC_SHORT_SOFT);
 	attribs.Push(ALC_FREQUENCY);
-	attribs.Push(48000);
+	attribs.Push(Libretro::AudioSampleRate);
 #else
 	if(*snd_samplerate > 0)
 	{
@@ -995,11 +998,14 @@ void OpenALSoundRenderer::RenderSamples(int16_t *samples, unsigned frames)
 	if (!render)
 		return;
 
-	// Music decoding takes far longer than a frame, so refill streams on the background thread.
-	StreamWake.notify_one();
-
+	// Loopback advances only when we render. Refill streams between small
+	// render blocks so decoded music cannot underrun while a worker is asleep
+	// (or while the frontend runs faster than real time).
+	std::unique_lock<std::mutex> lock(StreamLock);
 	while (frames)
 	{
+		for (size_t i = 0; i < Streams.Size(); ++i)
+			Streams[i]->Process();
 		unsigned count = std::min(frames, 256u);
 		render(Device, samples, count);
 		samples += count * 2;
@@ -1306,8 +1312,12 @@ void OpenALSoundRenderer::UnloadSound(SoundHandle sfx)
 
 SoundStream *OpenALSoundRenderer::CreateStream(SoundStreamCallback callback, int buffbytes, SampleType stype, ChannelConfig chans, int samplerate, void *userdata)
 {
+#ifdef __LIBRETRO__
+	// Loopback streams are refilled by RenderSamples as the mixer advances.
+#else
 	if(StreamThread.get_id() == std::thread::id())
 		StreamThread = std::thread(std::mem_fn(&OpenALSoundRenderer::BackgroundProc), this);
+#endif
 	OpenALSoundStream *stream = new OpenALSoundStream(this);
 	if (!stream->Init(callback, buffbytes, stype, chans, samplerate, userdata))
 	{

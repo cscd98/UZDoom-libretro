@@ -96,6 +96,7 @@ const char *Choice(const char *key, std::initializer_list<const char *> values, 
 
 retro_core_option_v2_category categories[] = {
     {"graphics", "Graphics", "Output resolution and antialiasing."},
+    {"audio", "Audio", "Audio submission and playback."},
     {"vr", "VR", "Headset mode, laser sight, HUD placement and thumbstick behaviour."},
     {"input", "Input", "Mouse sensitivity and keyboard bindings used by the retropad."},
 #if 0
@@ -462,6 +463,16 @@ void RegisterOptions(bool engine)
         }
     }
 #endif
+
+    retro_core_option_v2_definition audio{};
+    audio.key = "uzdoom_audio_submission";
+    audio.desc = "Audio submission (restart required)";
+    audio.category_key = "audio";
+    audio.info = "Synchronous submits audio with each video frame and enables frontend audio rate control. Asynchronous uses the frontend audio callback thread. Unsupported frontends fall back to synchronous. Restart the core after changing.";
+    audio.default_value = "async";
+    audio.values[0] = {"async", "Asynchronous"};
+    audio.values[1] = {"sync", "Synchronous"};
+    definitions.push_back(audio);
 
     definitions.push_back({});
     retro_core_options_v2 options{categories, definitions.data()};

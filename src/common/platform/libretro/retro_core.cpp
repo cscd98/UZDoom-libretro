@@ -80,7 +80,7 @@ void EngineEntry()
             "+vid_preferbackend", UseVulkan ? "1" : GLES ? "2" : "0",
             "+vid_fullscreen", "false", "+vid_defwidth", std::to_string(Width), "+vid_defheight", std::to_string(Height),
             "+cl_capfps", "true", "+showendoom", "0",
-            "+snd_samplerate", "48000"
+            "+snd_samplerate", std::to_string(AudioSampleRate)
         };
 
         std::vector<const char *> argv;
@@ -212,7 +212,7 @@ void UpdateFrameRate()
 
     if (started && Environment)
     {
-        retro_system_av_info info{{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {FrameRate, 48000.0}};
+        retro_system_av_info info{{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {FrameRate, double(AudioSampleRate)}};
         Environment(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &info);
     }
 }
@@ -330,7 +330,7 @@ void retro_get_system_info(retro_system_info *info)
 
 void retro_get_system_av_info(retro_system_av_info *info)
 {
-    *info = {{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {TargetFrameRate(), 48000.0}};
+    *info = {{Width, Height, MaxWidth, MaxHeight, float(Width) / Height}, {TargetFrameRate(), double(AudioSampleRate)}};
 }
 
 bool retro_load_game(const retro_game_info *info)
