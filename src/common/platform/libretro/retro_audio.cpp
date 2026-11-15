@@ -20,10 +20,11 @@ retro_audio_sample_batch_t batch = nullptr;
 SoundRenderer *audioRenderer = nullptr;
 bool asynchronous = false, enabled = false;
 double remainder = 0;
+unsigned audioGeneration = 0;
 
 void Drain()
 {
-    std::lock_guard<std::mutex> lock(audioMutex);
+    std::unique_lock<std::mutex> lock(audioMutex);
     if (asynchronous && !enabled)
         return;
 
@@ -36,27 +37,40 @@ void Drain()
             audioRenderer->RenderSamples(buffer.data(), unsigned(frames));
         pending.insert(pending.end(), buffer.begin(), buffer.begin() + frames * 2);
     }
-    while (!pending.empty())
+    const unsigned generation = audioGeneration;
+    const auto submitBatch = batch;
+    const auto submitSample = sample;
+    std::deque<int16_t> output;
+    output.swap(pending);
+    // Frontend submission may block during shutdown. Never hold the mutex
+    // needed to disable audio or detach the renderer across frontend calls.
+    lock.unlock();
+    while (!output.empty())
     {
-        size_t count = std::min(buffer.size(), pending.size());
-        std::copy_n(pending.begin(), count, buffer.begin());
+        size_t count = std::min(buffer.size(), output.size());
+        std::copy_n(output.begin(), count, buffer.begin());
         size_t consumed = count / 2;
 
-        if (batch)
-            consumed = std::min(consumed, batch(buffer.data(), consumed));
-        else if (sample)
+        if (submitBatch)
+            consumed = std::min(consumed, submitBatch(buffer.data(), consumed));
+        else if (submitSample)
             for (size_t i = 0; i < consumed; ++i)
-                sample(buffer[2*i], buffer[2*i+1]);
-        pending.erase(pending.begin(), pending.begin() + consumed * 2);
+                submitSample(buffer[2*i], buffer[2*i+1]);
+        output.erase(output.begin(), output.begin() + consumed * 2);
 
         if (consumed * 2 < count)
             break;
     }
+    lock.lock();
+    // A reset or state change invalidates samples already in flight.
+    if (generation == audioGeneration)
+        pending.insert(pending.begin(), output.begin(), output.end());
 }
 
 void SetState(bool state)
 {
     std::lock_guard<std::mutex> lock(audioMutex);
+    ++audioGeneration;
     enabled = state;
     if (!state)
         pending.clear();
@@ -100,6 +114,7 @@ void InitAudio()
 void ResetAudio()
 {
     std::lock_guard<std::mutex> lock(audioMutex);
+    ++audioGeneration;
     pending.clear();
     remainder = 0;
 }
@@ -107,6 +122,7 @@ void ResetAudio()
 void SetAudioRenderer(SoundRenderer *renderer)
 {
     std::lock_guard<std::mutex> lock(audioMutex);
+    ++audioGeneration;
     audioRenderer = renderer;
     pending.clear();
 }
