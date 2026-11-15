@@ -4189,7 +4189,10 @@ static int D_DoomMain_Internal (void)
 		I_FatalError("Cannot find " BASEWAD);
 	}
 	LoadHexFont(wad);	// load hex font early so we have it during startup.
+	// Avoid loading the widget resources on retroarch.
+#ifndef __LIBRETRO__
 	InitWidgetResources(wad);
+#endif
 
 	C_InitConsole(80*8, 25*8, false);
 
@@ -4453,10 +4456,12 @@ int GameMain()
 	M_SaveDefaultsFinal();
 	DeleteStartupScreen();
 	C_UninitCVars(); // must come last so that nothing will access the CVARs anymore after deletion.
+#ifndef __LIBRETRO__
 	if(ret != 1337)
 	{
 		CloseWidgetResources();
 	}
+#endif
 	delete Args;
 	Args = nullptr;
 	return ret;
