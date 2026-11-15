@@ -17,6 +17,7 @@ std::mutex audioMutex;
 std::deque<int16_t> pending;
 retro_audio_sample_t sample = nullptr;
 retro_audio_sample_batch_t batch = nullptr;
+SoundRenderer *audioRenderer = nullptr;
 bool asynchronous = false, enabled = false;
 double remainder = 0;
 
@@ -26,7 +27,15 @@ void Drain()
     if (asynchronous && !enabled)
         return;
 
-    std::array<int16_t, 4096> buffer;
+    std::array<int16_t, 4096> buffer{};
+    if (asynchronous && pending.empty())
+    {
+        // Generate audio on demand, independently of slow video frames.
+        const size_t frames = std::min(size_t(AudioSampleRate / 100), buffer.size() / 2);
+        if (audioRenderer)
+            audioRenderer->RenderSamples(buffer.data(), unsigned(frames));
+        pending.insert(pending.end(), buffer.begin(), buffer.begin() + frames * 2);
+    }
     while (!pending.empty())
     {
         size_t count = std::min(buffer.size(), pending.size());
@@ -95,8 +104,19 @@ void ResetAudio()
     remainder = 0;
 }
 
+void SetAudioRenderer(SoundRenderer *renderer)
+{
+    std::lock_guard<std::mutex> lock(audioMutex);
+    audioRenderer = renderer;
+    pending.clear();
+}
+
 void RenderAudio()
 {
+    // The frontend callback owns both mixing and submission in async mode.
+    if (asynchronous)
+        return;
+
     // Advance the mixer on the engine thread
     const double rate = std::isfinite(FrameRate) ? std::max(1.0, FrameRate) : 35.0;
     remainder += AudioSampleRate;

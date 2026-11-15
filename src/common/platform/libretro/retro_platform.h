@@ -1,6 +1,8 @@
 #pragma once
 #include "libretro.h"
 
+class SoundRenderer;
+
 namespace Libretro
 {
 extern retro_environment_t Environment;
@@ -24,6 +26,7 @@ const char *ContentPath();
 void SetAudioSample(retro_audio_sample_t callback);
 void SetAudioBatch(retro_audio_sample_batch_t callback);
 void InitAudio();
+void SetAudioRenderer(SoundRenderer *renderer);
 void ResetAudio();
 void RenderAudio();
 void RegisterOptions(bool engine);

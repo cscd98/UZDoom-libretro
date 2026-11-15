@@ -33,6 +33,9 @@
 #include "m_argv.h"
 #include "oalsound.h"
 #include "printf.h"
+#ifdef __LIBRETRO__
+#include "retro_platform.h"
+#endif
 
 EXTERN_CVAR (Float, snd_sfxvolume)
 EXTERN_CVAR(Float, snd_musicvolume)
@@ -276,11 +279,18 @@ void I_InitSound ()
 		Printf (TEXTCOLOR_RED"Sound init failed. Using nosound.\n");
 	}
 	snd_sfxvolume->Callback ();
+#ifdef __LIBRETRO__
+	Libretro::SetAudioRenderer(GSnd);
+#endif
 }
 
 
 void I_CloseSound ()
 {
+#ifdef __LIBRETRO__
+	// Wait for any audio callback before unloading samples or the renderer.
+	Libretro::SetAudioRenderer(nullptr);
+#endif
 	// Free all loaded samples. Beware that the sound engine may already have been deleted.
 	if (soundEngine) soundEngine->UnloadAllSounds();
 
