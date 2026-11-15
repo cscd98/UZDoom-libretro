@@ -139,6 +139,18 @@ void C_InitCVars(int which)
 
 void C_UninitCVars()
 {
+#ifdef __LIBRETRO__
+	// fix for segfault when reloading libretro content
+	callbacks = nullptr;
+	FBaseCVar::DisableCallbacks();
+	for (const auto &value : LatchedValues)
+	{
+		if (value.Type == CVAR_String)
+			delete[] value.Value.String;
+	}
+	LatchedValues.Clear();
+#endif
+
 	decltype(cvarMap)::Iterator it(cvarMap);
 	decltype(cvarMap)::Pair* pair;
 	while (it.NextPair(pair))
@@ -147,6 +159,10 @@ void C_UninitCVars()
 		pair->Value = nullptr;
 		delete var;
 	}
+#ifdef __LIBRETRO__
+	// fix for segfault when reloading libretro content
+	cvarMap.Clear();
+#endif
 }
 
 FBaseCVar::FBaseCVar (const char *var_name, uint32_t flags, void *callback, const char *descr)

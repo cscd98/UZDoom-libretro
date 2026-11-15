@@ -130,6 +130,10 @@ VulkanRenderDevice::VulkanRenderDevice(void *hMonitor, bool fullscreen, std::sha
 VulkanRenderDevice::~VulkanRenderDevice()
 {
 	vkDeviceWaitIdle(device->device); // make sure the GPU is no longer using any objects before RAII tears them down
+#ifdef __LIBRETRO__
+	// fix for segfault when reloading libretro content
+	PPResource::ResetAll();
+#endif
 
 	delete mVertexData;
 	delete mSkyData;
